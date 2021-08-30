@@ -50,7 +50,7 @@ func main() {
 		return
 	}
 
-	filename := "./images/sampleimage.jpg" // os.Args[3]
+	filename := os.Args[1]
 	window := gocv.NewWindow("Tensorflow Classifier")
 	defer window.Close()
 
@@ -80,7 +80,17 @@ func main() {
 
 	for {
 
-		blob := gocv.BlobFromImage(img, 1.0, image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
+		dstimg := gocv.NewMat()
+		defer dstimg.Close()
+
+		gocv.Flip(img, &dstimg, 1)
+
+		dstimg2 := gocv.NewMat()
+		defer dstimg2.Close()
+
+		gocv.Resize(dstimg, &dstimg2, image.Pt(224, 224), 0, 0, 0)
+
+		blob := gocv.BlobFromImage(dstimg2, 1.0, image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
 
 		// feed the blob into the classifier
 		net.SetInput(blob, "x")
@@ -141,13 +151,13 @@ func main() {
 		}
 		status = fmt.Sprintf("description: %v, maxVal: %v\n", desc, maxVal)
 		fmt.Println("status", status)
-		gocv.PutText(&img, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
+		gocv.PutText(&dstimg2, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
 
 		blob.Close()
 		prob.Close()
 		probMat.Close()
 
-		window.IMShow(img)
+		window.IMShow(dstimg2)
 		if window.WaitKey(1) >= 0 {
 			break
 		}
