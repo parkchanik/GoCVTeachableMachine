@@ -177,6 +177,7 @@ func main() {
 		prob.Close()
 		probMat.Close()
 
+		break
 		window.IMShow(dstimg2)
 		if window.WaitKey(1) >= 0 {
 			break

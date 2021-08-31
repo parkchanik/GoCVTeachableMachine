@@ -50,11 +50,13 @@ func main() {
 		return
 	}
 
+	fmt.Println("descriptions", descriptions)
+
 	filename := os.Args[1]
 	window := gocv.NewWindow("Tensorflow Classifier")
 	defer window.Close()
 
-	img := gocv.IMRead(filename, gocv.IMReadColor)
+	img := gocv.IMRead(filename, gocv.IMReadUnchanged)
 	if img.Empty() {
 		fmt.Printf("Error reading image from: %v\n", filename)
 		return
@@ -71,6 +73,12 @@ func main() {
 		return
 	}
 	defer net.Close()
+
+	//layernames := net.GetLayerNames()
+
+	// for _, n := range net.GetLayerNames() {
+	// 	fmt.Println("LayerName : ", n)
+	// }
 	//net.SetPreferableBackend(gocv.NetBackendType(backend))
 	//net.SetPreferableTarget(gocv.NetTargetType(target))
 
@@ -80,27 +88,64 @@ func main() {
 
 	for {
 
-		dstimg := gocv.NewMat()
-		defer dstimg.Close()
+		// dstimg := gocv.NewMat()
+		// defer dstimg.Close()
 
-		gocv.Flip(img, &dstimg, 1)
+		// gocv.Flip(img, &dstimg, 1)
 
-		dstimg2 := gocv.NewMat()
-		defer dstimg2.Close()
+		// dstimg2 := gocv.NewMat()
+		// defer dstimg2.Close()
 
-		gocv.Resize(dstimg, &dstimg2, image.Pt(224, 224), 0, 0, 0)
+		// gocv.Resize(img, &dstimg2, image.Pt(224, 224), 0, 0, 0)
 
-		blob := gocv.BlobFromImage(dstimg2, 1.0, image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
+		// fix code
+		img.ConvertTo(&img, gocv.MatTypeCV32F)
+
+		gocv.IMWrite("./images/img.png", img)
+
+		fmt.Println("img size : ", img.Size())
+		//blob := gocv.BlobFromImage(img, 1.0, image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
+		// gocv.NewScalar(104, 117, 123, 0) 무슨 의미?
+		// 1/127 스케일 펙터 값이 문제?
+		blob := gocv.BlobFromImage(img, 1/127., image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), false, false)
+
+		fmt.Println("blob Mean : ", blob.Mean())
+
+		fmt.Println("blob rows : ", blob.Rows())
+		fmt.Println("blob cols : ", blob.Cols())
+		fmt.Println("blob size : ", blob.Size())
 
 		// feed the blob into the classifier
 		net.SetInput(blob, "x")
 
 		// run a forward pass thru the network
 		//prob := net.Forward("Identity")
+		//prob := net.Forward("sequential_12/sequential_11/dense_Dense6/Softmax")
 		prob := net.Forward("")
+		//prob := net.ForwardLayers(layernames)
+
+		for i := 0; i < prob.Total(); i = i + 1 {
+			fmt.Println("getfloatat : ", prob.GetFloatAt(0, i))
+		}
 
 		i := 0
 		var probstr bytes.Buffer
+		// for _, v := range prob {
+		// 	i := 0
+
+		// 	for i < v.Cols() {
+
+		// 		floatstr := fmt.Sprintf("prob (i=%d)[%f] ,,,,, ", i, v.GetFloatAt(0, i))
+		// 		//fmt.Println("prob.GetFloatAt(0, i)", v.GetFloatAt(0, i))
+		// 		fmt.Println("prob cols : ", v.Size(), v.GetFloatAt(0, i))
+
+		// 		probstr.WriteString(floatstr)
+
+		// 		i = i + 1
+
+		// 	}
+
+		// }
 		for i < prob.Cols() {
 
 			floatstr := fmt.Sprintf("prob (i=%d)[%f] ,,,,, ", i, prob.GetFloatAt(0, i))
@@ -113,16 +158,16 @@ func main() {
 
 		fmt.Printf("------- prob.Data[%s]\n", probstr)
 
-		fmt.Println("prob size", prob.Size())
+		//fmt.Println("prob size", prob.Size())
 		// reshape the results into a 1x1000 matrix
 		probMat := prob.Reshape(1, 1)
 
-		fmt.Println("probMat.Size", probMat.Size())
+		//fmt.Println("probMat.Size", probMat.Size())
 		//fmt.Println("probMat.ElemSize", probMat.ElemSize())
 
 		fmt.Println("probMat.Data")
 
-		i = 0
+		// i = 0
 
 		var str bytes.Buffer
 		for i < probMat.Cols() {
@@ -144,20 +189,20 @@ func main() {
 
 		fmt.Printf("minVal[%f] , maxVal[%f] , minLoc[%v] , maxLoc[%v]\n", minVal, maxVal, minLoc, maxLoc)
 
-		// display classification
+		//display classification
 		desc := "Unknown"
 		if maxLoc.X < 1000 {
 			desc = descriptions[maxLoc.X]
 		}
 		status = fmt.Sprintf("description: %v, maxVal: %v\n", desc, maxVal)
 		fmt.Println("status", status)
-		gocv.PutText(&dstimg2, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
+		gocv.PutText(&img, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
 
 		blob.Close()
 		prob.Close()
 		probMat.Close()
-
-		window.IMShow(dstimg2)
+		break
+		window.IMShow(img)
 		if window.WaitKey(1) >= 0 {
 			break
 		}
