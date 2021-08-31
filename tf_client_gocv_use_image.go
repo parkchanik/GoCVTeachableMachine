@@ -107,7 +107,8 @@ func main() {
 		//blob := gocv.BlobFromImage(img, 1.0, image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
 		// gocv.NewScalar(104, 117, 123, 0) 무슨 의미?
 		// 1/127 스케일 펙터 값이 문제?
-		blob := gocv.BlobFromImage(img, 1/127., image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), false, false)
+
+		blob := gocv.BlobFromImage(img, 1/127., image.Pt(224, 224), gocv.NewScalar(104, 117, 123, 0), true, false)
 
 		fmt.Println("blob Mean : ", blob.Mean())
 
