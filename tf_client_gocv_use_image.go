@@ -226,3 +226,7 @@ func readDescriptions(path string) ([]string, error) {
 	}
 	return lines, scanner.Err()
 }
+
+func predict(img Mat) {
+
+}

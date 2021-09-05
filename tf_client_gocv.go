@@ -73,6 +73,9 @@ func main() {
 	window := gocv.NewWindow("Tensorflow Classifier")
 	defer window.Close()
 
+	window2 := gocv.NewWindow("flip")
+	defer window2.Close()
+
 	img := gocv.NewMat()
 	defer img.Close()
 
@@ -105,80 +108,28 @@ func main() {
 
 		gocv.Flip(img, &dstimg, 1)
 
-		dstimg2 := gocv.NewMat()
-		defer dstimg2.Close()
+		minVal, maxVal, minLoc, maxLoc := CaculateModelImage(net, img)
 
-		gocv.Resize(dstimg, &dstimg2, image.Pt(224, 224), 0, 0, 0)
-
-		blob := gocv.BlobFromImage(dstimg2, 1.0, image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
-
-		// feed the blob into the classifier
-		net.SetInput(blob, "x")
-
-		// run a forward pass thru the network
-		//prob := net.Forward("Identity")
-		prob := net.Forward("")
-
-		i := 0
-		var probstr bytes.Buffer
-		for i < prob.Cols() {
-
-			floatstr := fmt.Sprintf("prob (i=%d)[%f] ,,,,, ", i, prob.GetFloatAt(0, i))
-			fmt.Println("prob.GetFloatAt(0, i)", prob.GetFloatAt(0, i))
-			probstr.WriteString(floatstr)
-
-			i = i + 1
-
-		}
-
-		fmt.Printf("------- prob.Data[%s]\n", probstr)
-
-		fmt.Println("prob size", prob.Size())
-		// reshape the results into a 1x1000 matrix
-		probMat := prob.Reshape(1, 1)
-
-		fmt.Println("probMat.Size", probMat.Size())
-		//fmt.Println("probMat.ElemSize", probMat.ElemSize())
-
-		fmt.Println("probMat.Data")
-
-		i = 0
-
-		var str bytes.Buffer
-		for i < probMat.Cols() {
-
-			floatstr := fmt.Sprintf("(i=%d)[%f] ,,,,, ", i, probMat.GetFloatAt(0, i))
-			fmt.Println("probMat.GetFloatAt(0, i)", probMat.GetFloatAt(0, i))
-			str.WriteString(floatstr)
-
-			i = i + 1
-
-		}
-
-		fmt.Printf("------- probMat.Data[%s]\n", str)
-
-		// determine the most probable classification
-		minVal, maxVal, minLoc, maxLoc := gocv.MinMaxLoc(probMat)
-
-		fmt.Println("----probMat", probMat)
-
-		fmt.Printf("minVal[%f] , maxVal[%f] , minLoc[%v] , maxLoc[%v]\n", minVal, maxVal, minLoc, maxLoc)
-
-		// display classification
 		desc := "Unknown"
 		if maxLoc.X < 1000 {
 			desc = descriptions[maxLoc.X]
 		}
 		status = fmt.Sprintf("description: %v, maxVal: %v\n", desc, maxVal)
-		fmt.Println("status", status)
-		gocv.PutText(&dstimg2, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
 
-		blob.Close()
-		prob.Close()
-		probMat.Close()
+		gocv.PutText(&img, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
 
-		break
-		window.IMShow(dstimg2)
+		minVal, maxVal, minLoc, maxLoc = CaculateModelImage(net, dstimg)
+
+		desc = "Unknown"
+		if maxLoc.X < 1000 {
+			desc = descriptions[maxLoc.X]
+		}
+		status = fmt.Sprintf("description: %v, maxVal: %v\n", desc, maxVal)
+
+		gocv.PutText(&dstimg, status, image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, statusColor, 2)
+
+		window.IMShow(img)
+		window2.IMShow(dstimg)
 		if window.WaitKey(1) >= 0 {
 			break
 		}
@@ -200,4 +151,67 @@ func readDescriptions(path string) ([]string, error) {
 		lines = append(lines, scanner.Text())
 	}
 	return lines, scanner.Err()
+}
+
+// predict
+func CaculateModelImage(net gocv.Net, img gocv.Mat) (float32, float32, image.Point, image.Point) {
+
+	blob := gocv.BlobFromImage(img, 1/127., image.Pt(224, 224), gocv.NewScalar(0, 0, 0, 0), true, false)
+
+	// feed the blob into the classifier
+	net.SetInput(blob, "x")
+
+	// run a forward pass thru the network
+	//prob := net.Forward("Identity")
+	prob := net.Forward("")
+
+	i := 0
+	var probstr bytes.Buffer
+	for i < prob.Cols() {
+
+		floatstr := fmt.Sprintf("prob (i=%d)[%f] ,,,,, ", i, prob.GetFloatAt(0, i))
+		fmt.Println("prob.GetFloatAt(0, i)", prob.GetFloatAt(0, i))
+		probstr.WriteString(floatstr)
+
+		i = i + 1
+
+	}
+
+	fmt.Printf("------- prob.Data[%s]\n", probstr)
+
+	fmt.Println("prob size", prob.Size())
+	// reshape the results into a 1x1000 matrix
+	probMat := prob.Reshape(1, 1)
+
+	fmt.Println("probMat.Size", probMat.Size())
+	//fmt.Println("probMat.ElemSize", probMat.ElemSize())
+
+	fmt.Println("probMat.Data")
+
+	i = 0
+
+	var str bytes.Buffer
+	for i < probMat.Cols() {
+
+		floatstr := fmt.Sprintf("(i=%d)[%f] ,,,,, ", i, probMat.GetFloatAt(0, i))
+		fmt.Println("probMat.GetFloatAt(0, i)", probMat.GetFloatAt(0, i))
+		str.WriteString(floatstr)
+
+		i = i + 1
+
+	}
+
+	fmt.Printf("------- probMat.Data[%s]\n", str)
+
+	// determine the most probable classification
+	minVal, maxVal, minLoc, maxLoc := gocv.MinMaxLoc(probMat)
+
+	fmt.Println("----probMat", probMat)
+
+	blob.Close()
+	prob.Close()
+	probMat.Close()
+
+	return minVal, maxVal, minLoc, maxLoc
+
 }
